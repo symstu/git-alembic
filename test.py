@@ -26,7 +26,8 @@ heads_revision = script.get_heads()
 print('heads: ', heads_revision)
 
 repo = Repo('')
-branch = str(repo.active_branch)
+# branch = str(repo.active_branch)
+branch = 'develop'
 print('branch: ', branch)
 
 
@@ -75,13 +76,14 @@ def create_migration(message):
 if __name__ == '__main__':
 
     # migrator()
+    #
+    # if len(heads_revision) > 2:
+    #     click.echo(f'Only 2 branches could be merged: {heads_revision}')
+    #
+    # elif len(heads_revision) == 2:
+    #     command.merge(config, heads_revision, message='AUTO_MERGE',
+    #                   branch_label=branch)
+    #     click.echo('Created merge before new migration')
 
-    if len(heads_revision) > 2:
-        click.echo(f'Only 2 branches could be merged: {heads_revision}')
-
-    elif len(heads_revision) == 2:
-        command.merge(config, heads_revision, message='AUTO_MERGE',
-                      branch_label=branch)
-        click.echo('Created merge before new migration')
-
-    command.revision(config, 'sdddddddddddddddddd')
+    command.revision(config, '9', head='38b0b18c04a1')
+    # command.revision(config, '6', branch_label=branch)
