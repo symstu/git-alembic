@@ -85,5 +85,7 @@ if __name__ == '__main__':
     #                   branch_label=branch)
     #     click.echo('Created merge before new migration')
 
-    command.revision(config, '9', head='38b0b18c04a1')
-    # command.revision(config, '6', branch_label=branch)
+    # command.revision(config, '9', head='38b0b18c04a1')
+    # command.revision(config, '9')
+    branch = 'master'
+    command.revision(config, '6', branch_label=branch)
