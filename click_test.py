@@ -43,47 +43,81 @@ class AlembicMigrations:
 
     def __get_last_revision__(self):
 
-        for rev in self.script.walk_revisions():
-            print(f'{rev}: {type(rev)}: {rev.revision}: {rev.branch_labels}')
+        revisions = [revision for revision in self.script.walk_revisions()]
+        # for rev in self.script.walk_revisions():
+        #     print(f'{rev}: {type(rev)}: {rev.revision}: {rev.branch_labels}')
+        if revisions:
+            return revisions[-1]
+
+        return None
 
     def __get_git_branch__(self):
         return str(self.git.active_branch)
 
     def create(self, name):
         r_heads = [head for head in self.heads]
-        print(r_heads)
+        # print(r_heads)
 
         if len(r_heads) < 2:
-            print('one head')
-            command.revision(self.config, name,
-                             depends_on=self.__get_git_branch__())
+
+            rev = self.__get_last_revision__()
+            git_branch = self.__get_git_branch__()
+
+            # Initial revision, set up current branch label
+            if not rev:
+                command.revision(self.config, name,
+                                 branch_label=self.__get_git_branch__())
+                return
+
+            # Continues revision - same branch name
+            if rev and (git_branch in rev.branch_labels):
+                command.revision(self.config, name)
+                return
+
+            # Branch has changed - new branch label
+            command.revision(self.config, name, branch_label=git_branch)
+
         else:
-            print(f'There are {len(r_heads)} heads: {r_heads}.\n'
+            print(f'There are {len(r_heads)} heads.\n'
                   f'You must merge migrations first.')
+            self.merge()
+
+    @staticmethod
+    def __merge_choices__(revision_heads):
+
+        inc = 0
+
+        for rev_1 in revision_heads:
+            for rev_2 in revision_heads:
+                if rev_1 != rev_2:
+
+                    inc += 1
+
+                    yield dict(
+                        inc=inc,
+                        migration1=rev_1,
+                        migration2=rev_2
+                    )
 
     def merge(self):
-        r_heads = [head for head in self.heads]
+        revision_heads = [head for head in self.heads]
 
-        if len(r_heads) < 2:
+        if len(revision_heads) < 2:
             print('There are not migrations for merge')
         else:
             print('\n\n-------------------------------------------------')
-            choices = []
-            inc = 0
+            merge_choices = [choice for choice in
+                             self.__merge_choices__(revision_heads)]
+            for choice in merge_choices:
 
-            for rev_1 in r_heads:
-                for rev_2 in r_heads:
-                    if rev_1 != rev_2:
+                rev_1 = choice['migration1']
+                rev_2 = choice['migration2']
 
-                        inc += 1
-                        choices.append(
-                            dict(
-                                migration1=rev_1,
-                                migration2=rev_2
-                            )
-                        )
-                        print(f'{inc}) {rev_1.branch_labels} -> '
-                              f'{rev_2.branch_labels}')
+                rev_1_branch = set(rev_1.branch_labels)
+                rev_2_branch = set(rev_2.branch_labels)
+
+                print(f'{choice["inc"]}) {rev_1_branch} -> '
+                      f'{rev_2_branch}')
 
             print('-------------------------------------------------\n\n')
 
@@ -92,25 +126,46 @@ class AlembicMigrations:
             try:
                 choice = int(choice)
 
-                if not (1 <= choice <= inc):
-                    print(f'Input value must be between 1 and {inc}')
+                if not (1 <= choice <= len(merge_choices)):
+                    print(f'Input value must be between 1 and '
+                          f'{len(merge_choices)}')
                     exit(0)
 
-                rev_1 = choices[choice - 1]['migration1']
-                rev_2 = choices[choice - 1]['migration2']
-
-                # print('choosen: ', choices[choice - 1])
-                # print(f'{rev_1.branch_labels} -> {rev_2.branch_labels}')
+                rev_1 = merge_choices[choice - 1]['migration1']
+                rev_2 = merge_choices[choice - 1]['migration2']
 
                 command.merge(
                     self.config,
                     revisions=[rev_1.revision, rev_2.revision],
-                    message=f'merge_{rev_1}({rev_1.branch_labels})_into_{rev_2}({rev_2.branch_labels})'
+                    message=f'merge_{rev_1}({rev_1.branch_labels})_into_{rev_2}'
+                            f'({rev_2.branch_labels})'
                 )
 
             except ValueError:
                 print('Your choice must be of int data type')
 
+    def history(self, limit=10, upper=True):
+
+        revisions = [revision for revision in self.script.walk_revisions()]
+
+        if limit < len(revisions):
+            limit = len(revisions)
+
+        if upper:
+            return revisions[-limit:]
+
+        return revisions[0: limit]
+
+    def migrate(self):
+
+        rev_heads = [head for head in self.heads]
+
+        if len(rev_heads) > 1:
+            return False
+
+        command.upgrade(self.config, rev_heads[0].revision)
+
+        return True
 
 al = AlembicMigrations()
 
@@ -139,7 +194,7 @@ def current():
 @cli.command()
 @click.argument('name')
 def create(name):
-    print(al.create(name))
+    al.create(name)
 
 
 @cli.command()
@@ -155,6 +210,24 @@ def last_revision():
 @cli.command()
 def revision_ver():
     al.get_revision()
+
+
+@cli.command()
+def migrate():
+    if not al.migrate():
+        print('\nYou must merge branches first\n')
+        al.merge()
+
+
+@cli.command()
+@click.argument('limit', default=10)
+def history(limit, upper=True):
+
+    revisions = al.history(limit, upper)
+
+    for revision in revisions:
+        print(f'{revision} {revision.branch_labels}')
+
 
 if __name__ == '__main__':
     cli()
