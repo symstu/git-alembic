@@ -179,7 +179,7 @@ def cli():
     pass
 
 
-@cli.command()
+@cli.command(help='Show current heads')
 def heads():
 
     print('------------------------------------------')
@@ -190,23 +190,23 @@ def heads():
         print('------------------------------------------')
 
 
-@cli.command()
+@cli.command(help='Show current migration revision')
 def current():
     print(al.current(True))
 
 
-@cli.command()
+@cli.command(help='Create new migration in current branch')
 @click.argument('name')
 def create(name):
     al.create(name)
 
 
-@cli.command()
+@cli.command(help='Merge branches')
 def merge():
     al.merge()
 
 
-@cli.command()
+@cli.command(help='Show previous migration')
 def last_revision():
     print(al.__get_last_revision__())
 
@@ -216,14 +216,14 @@ def revision_ver():
     al.get_revision()
 
 
-@cli.command()
+@cli.command(help='Upgrade to head')
 def migrate():
     if not al.migrate():
         print('\nYou must merge branches first\n')
         al.merge()
 
 
-@cli.command()
+@cli.command(help='Show last migration, default=10')
 @click.argument('limit', default=10)
 def history(limit, upper=True):
 
