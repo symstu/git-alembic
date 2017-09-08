@@ -143,7 +143,7 @@ class AlembicMigrations:
 
                 command.merge(
                     self.config,
-                    revisions=[rev_1.revision, rev_2.revision],
+                    revisions=[rev_2.revision, rev_1.revision],
                     message=f'merge_{rev_1}({rev_1.branch_labels})_into_{rev_2}'
                             f'({rev_2.branch_labels})'
                 )
