@@ -46,9 +46,12 @@ class AlembicMigrations:
         revisions = [revision for revision in self.script.walk_revisions()]
         # for rev in self.script.walk_revisions():
         #     print(f'{rev}: {type(rev)}: {rev.revision}: {rev.branch_labels}')
+        print(f'revisions: {revisions}')
         if revisions:
-            return revisions[-1]
+            print('return last')
+            return revisions[:-1]
 
+        print('return None')
         return None
 
     def __get_git_branch__(self):
@@ -61,6 +64,7 @@ class AlembicMigrations:
         if len(r_heads) < 2:
 
             rev = self.__get_last_revision__()
+
             git_branch = self.__get_git_branch__()
 
             # Initial revision, set up current branch label
@@ -69,8 +73,11 @@ class AlembicMigrations:
                                  branch_label=self.__get_git_branch__())
                 return
 
-            # Continues revision - same branch name
-            if rev and (git_branch in rev.branch_labels):
+            # Continues revision - same branch name OR
+            # if was merge
+            rev = rev[0]
+            if (rev and (git_branch in rev.branch_labels)) or \
+                    (len(rev.down_revision) > 1):
                 command.revision(self.config, name)
                 return
 
