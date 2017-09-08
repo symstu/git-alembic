@@ -74,7 +74,7 @@ class AlembicMigrations:
             # Continues revision - same branch name OR
             # if it was merged
             if (rev and (git_branch in rev.branch_labels)) or \
-                    (len(rev.down_revision) > 1):
+                    (len(rev.down_revision) > 1 and (type(rev.down_revision) != str)):
                 command.revision(self.config, name)
                 return
 
