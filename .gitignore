@@ -102,7 +102,6 @@ ENV/
 .mypy_cache/
 /bin/
 /include/
-/alembic/
 /share/
 /pyvenv.cfg
 /lib64/
