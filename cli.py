@@ -21,7 +21,7 @@ def heads():
 
     for head in al.heads:
         print(f'{head.longdoc}')
-        print(f'Branch labels: {head.branch_labels}')
+        print(f'Branch: {al.branch_name(head)}')
         print('------------------------------------------')
 
 
@@ -65,10 +65,4 @@ def history(limit, upper=True):
     revisions = al.history(limit, upper)
 
     for revision in revisions:
-
-        branch = revision.revision
-
-        if hasattr(revision.module, 'git_branch'):
-            branch = revision.module.git_branch
-
-        print(f'{revision} | {branch}')
+        print(f'{revision} | {al.branch_name(revision)}')

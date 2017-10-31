@@ -98,7 +98,7 @@ class AlembicMigrations:
                         migration2=rev_2
                     )
 
-    def __get_branch_name__(self, revision):
+    def branch_name(self, revision):
 
         branch = revision.revision
 
@@ -121,8 +121,8 @@ class AlembicMigrations:
                 rev_1 = choice['migration1']
                 rev_2 = choice['migration2']
 
-                rev_1_branch = self.__get_branch_name__(rev_1)
-                rev_2_branch = self.__get_branch_name__(rev_2)
+                rev_1_branch = self.branch_name(rev_1)
+                rev_2_branch = self.branch_name(rev_2)
 
                 print(f'{choice["inc"]}) {rev_1_branch} -> '
                       f'{rev_2_branch}')
