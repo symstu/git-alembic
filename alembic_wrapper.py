@@ -4,7 +4,7 @@ import os
 from sqlalchemy import create_engine
 
 from alembic.runtime.migration import MigrationContext, MigrationInfo
-from alembic.script import ScriptDirectory
+from alembic.script import ScriptDirectory, Script
 from alembic.config import Config
 from alembic import command
 
@@ -20,7 +20,6 @@ class AlembicMigrations:
 
         self.context = MigrationContext.configure(self.conn)
         self.config = Config('alembic.ini')
-        self.config.__setattr__('current_branch', 'hello motherfucker')
 
         if not os.path.exists('alembic'):
             self.init()
@@ -48,8 +47,7 @@ class AlembicMigrations:
             yield self.get_revision(head)
 
     def get_revision(self, revision_id='9c26830e16a1'):
-        rev = self.script.get_revision(revision_id)
-        return rev
+        return self.script.get_revision(revision_id)
 
     def __get_last_revision__(self):
 
@@ -73,26 +71,10 @@ class AlembicMigrations:
 
         if len(r_heads) < 2:
 
-            rev = self.__get_last_revision__()
             git_branch = self.__get_git_branch__()
+            self.config.__setattr__('git_branch', git_branch)
 
-            # Initial revision, set up current branch label
-            if not rev:
-                command.revision(self.config, name, branch_label=git_branch)
-                return
-
-            # Continues revision - same branch name OR
-            # if it was merged
-            if (rev and (git_branch in rev.branch_labels)) or \
-                    (len(rev.down_revision) > 1 and (type(rev.down_revision) != str)):
-                command.revision(self.config, name)
-                return
-
-            # Branch has changed - new branch label
-            command.revision(
-                self.config, name,
-                branch_label=git_branch
-            )
+            command.revision(self.config, name)
 
         else:
             print(f'There are {len(r_heads)} heads.\n'
@@ -116,6 +98,15 @@ class AlembicMigrations:
                         migration2=rev_2
                     )
 
+    def __get_branch_name__(self, revision):
+
+        branch = revision.revision
+
+        if hasattr(revision.module, 'git_branch'):
+            branch = revision.module.git_branch
+
+        return branch
+
     def merge(self):
         revision_heads = [head for head in self.heads]
 
@@ -130,8 +121,8 @@ class AlembicMigrations:
                 rev_1 = choice['migration1']
                 rev_2 = choice['migration2']
 
-                rev_1_branch = set(rev_1.branch_labels)
-                rev_2_branch = set(rev_2.branch_labels)
+                rev_1_branch = self.__get_branch_name__(rev_1)
+                rev_2_branch = self.__get_branch_name__(rev_2)
 
                 print(f'{choice["inc"]}) {rev_1_branch} -> '
                       f'{rev_2_branch}')
@@ -164,8 +155,6 @@ class AlembicMigrations:
     def history(self, limit=10, upper=True):
 
         revisions = [revision for revision in self.script.walk_revisions()]
-        print(dir(revisions[0]))
-        print(revisions.__getattribute__('git_branch'))
 
         if limit < len(revisions):
             limit = len(revisions)

@@ -65,4 +65,10 @@ def history(limit, upper=True):
     revisions = al.history(limit, upper)
 
     for revision in revisions:
-        print(f'{revision} {revision.git_branch}')
+
+        branch = revision.revision
+
+        if hasattr(revision.module, 'git_branch'):
+            branch = revision.module.git_branch
+
+        print(f'{revision} | {branch}')
