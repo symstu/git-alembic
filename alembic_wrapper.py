@@ -1,6 +1,5 @@
-import click
-
 from git import Repo
+import os
 
 from sqlalchemy import create_engine
 
@@ -9,15 +8,23 @@ from alembic.script import ScriptDirectory
 from alembic.config import Config
 from alembic import command
 
+from models.history import VersionHistory
+
 
 class AlembicMigrations:
     def __init__(self):
+
         self.engine = create_engine(
             "postgresql+psycopg2://postgres:postgres@localhost:5432/alembic")
         self.conn = self.engine.connect()
 
         self.context = MigrationContext.configure(self.conn)
         self.config = Config('alembic.ini')
+        self.config.__setattr__('current_branch', 'hello motherfucker')
+
+        if not os.path.exists('alembic'):
+            self.init()
+
         self.script = ScriptDirectory.from_config(self.config)
         self.git = Repo('')
 
@@ -27,6 +34,9 @@ class AlembicMigrations:
             return command.current(self.config, verbose=True)
 
         return self.context.get_current_revision()
+
+    def init(self):
+        command.init(self.config, 'alembic/', '')
 
     @property
     def heads(self, verbose=False):
@@ -79,7 +89,10 @@ class AlembicMigrations:
                 return
 
             # Branch has changed - new branch label
-            command.revision(self.config, name, branch_label=git_branch)
+            command.revision(
+                self.config, name,
+                branch_label=git_branch
+            )
 
         else:
             print(f'There are {len(r_heads)} heads.\n'
@@ -151,6 +164,8 @@ class AlembicMigrations:
     def history(self, limit=10, upper=True):
 
         revisions = [revision for revision in self.script.walk_revisions()]
+        print(dir(revisions[0]))
+        print(revisions.__getattribute__('git_branch'))
 
         if limit < len(revisions):
             limit = len(revisions)
@@ -167,71 +182,10 @@ class AlembicMigrations:
         if len(rev_heads) > 1:
             return False
 
+        current_revision = self.current()
         command.upgrade(self.config, rev_heads[0].revision)
 
+        db_log = VersionHistory(current_revision, rev_heads[0].revision)
+        db_log.save()
+
         return True
-
-al = AlembicMigrations()
-
-
-@click.group()
-def cli():
-    pass
-
-
-@cli.command(help='Show current heads')
-def heads():
-
-    print('------------------------------------------')
-
-    for head in al.heads:
-        print(f'{head.longdoc}')
-        print(f'Branch labels: {head.branch_labels}')
-        print('------------------------------------------')
-
-
-@cli.command(help='Show current migration revision')
-def current():
-    print(al.current(True))
-
-
-@cli.command(help='Create new migration in current branch')
-@click.argument('name')
-def create(name):
-    al.create(name)
-
-
-@cli.command(help='Merge branches')
-def merge():
-    al.merge()
-
-
-@cli.command(help='Show previous migration')
-def last_revision():
-    print(al.__get_last_revision__())
-
-
-@cli.command()
-def revision_ver():
-    al.get_revision()
-
-
-@cli.command(help='Upgrade to head')
-def migrate():
-    if not al.migrate():
-        print('\nYou must merge branches first\n')
-        al.merge()
-
-
-@cli.command(help='Show last migration, default=10')
-@click.argument('limit', default=10)
-def history(limit, upper=True):
-
-    revisions = al.history(limit, upper)
-
-    for revision in revisions:
-        print(f'{revision} {revision.branch_labels}')
-
-
-if __name__ == '__main__':
-    cli()

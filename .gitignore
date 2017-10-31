@@ -19,7 +19,8 @@ lib/
 lib64/
 parts/
 sdist/
-var/
+var
+.idea/
 wheels/
 *.egg-info/
 .installed.cfg
@@ -100,3 +101,8 @@ ENV/
 # mypy
 .mypy_cache/
 /bin/
+/include/
+/alembic/
+/share/
+/pyvenv.cfg
+/lib64/
