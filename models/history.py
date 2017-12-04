@@ -6,8 +6,8 @@ class VersionHistory(Base):
     __tablename__ = 'alembic_version_history'
 
     id = Column(Integer, primary_key=True)
-    previous_revision = Column(String, nullable=False, unique=True)
-    forward_revision = Column(String, nullable=False, unique=True)
+    previous_revision = Column(String, nullable=False)
+    forward_revision = Column(String, nullable=False)
 
     def __init__(self, previous_revision, forward_revision):
         self.previous_revision = previous_revision
@@ -21,7 +21,8 @@ class VersionHistory(Base):
         print('result: ', result)
         return True if not result else False
 
-    def list(self, offset=0, limit=0):
+    @staticmethod
+    def list(offset=0, limit=0):
         return db_session.query(VersionHistory)\
             .filter()\
             .order_by(VersionHistory.id.desc()) \

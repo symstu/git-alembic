@@ -56,9 +56,10 @@ def migrate():
     if not al.migrate():
         print('\nYou must merge branches first\n')
         al.merge()
+        al.migrate()
 
 
-@cli.command(help='Show last migration, default=10')
+@cli.command(help='Show last migration, limit=10')
 @click.argument('limit', default=10)
 def history(limit, upper=True):
 
@@ -69,5 +70,13 @@ def history(limit, upper=True):
 
 
 @cli.command(help="show future migrations")
-def show_next_migration():
-    print(al.next_rev())
+def upgrade_migrations():
+    print(al.upgrade_revisions(al.current()))
+
+
+@cli.command(help="Compare local and remote history")
+def compare_history():
+    from alembic_wrapper import CompareLocalRemote
+
+    lr = CompareLocalRemote()
+    lr.compare_history()

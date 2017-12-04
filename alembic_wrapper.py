@@ -3,8 +3,8 @@ import os
 
 from sqlalchemy import create_engine
 
-from alembic.runtime.migration import MigrationContext, MigrationInfo
-from alembic.script import ScriptDirectory, Script
+from alembic.runtime.migration import MigrationContext
+from alembic.script import ScriptDirectory
 from alembic.config import Config
 from alembic import command, util
 
@@ -20,6 +20,7 @@ class AlembicMigrations:
 
         self.context = MigrationContext.configure(self.conn)
         self.config = Config('alembic.ini')
+        self.__set_branch_to_script__()
 
         if os.path.exists('alembic'):
             # self.init()
@@ -107,15 +108,14 @@ class AlembicMigrations:
     def __get_git_branch__():
         return str(Repo('').active_branch)
 
+    def __set_branch_to_script__(self):
+        self.config.__setattr__('git_branch', self.__get_git_branch__())
+
     def create(self, name):
 
         r_heads = [head for head in self.heads]
 
         if len(r_heads) < 2:
-
-            git_branch = self.__get_git_branch__()
-            self.config.__setattr__('git_branch', git_branch)
-
             command.revision(self.config, name)
 
         else:
@@ -222,18 +222,48 @@ class AlembicMigrations:
 
         for migration in upgrade_migrations:
             command.upgrade(self.config, migration.revision)
-            print(f'migrating from `{migration.down_revision}` to '
+
+            # it may be a list when revision in merge point
+            down_revision = str(migration.down_revision)
+            print(f'migrating from `{down_revision}` to '
                   f'{migration.revision}')
 
             # initial migration
-            if not migration.down_revision:
-                print('current_revision: ', migration.down_revision)
+            if not down_revision:
+                print('current_revision: ', down_revision)
                 continue
 
-            db_log = VersionHistory(migration.down_revision, migration.revision)
+            db_log = VersionHistory(down_revision, migration.revision)
             print('saved migration: ', db_log.save())
 
         return True
 
     def upgrade_revisions(self, head):
         return [rev for rev in self.script.iterate_revisions(head, self.current())][::-1]
+
+    @property
+    def all_local_revisions(self):
+        return [rev for rev in self.script.walk_revisions()][::-1]
+
+
+class CompareLocalRemote:
+
+    def __init__(self):
+        self.session = AlembicMigrations()
+
+    def compare_history(self):
+        from models import db_session
+
+        remote_history = db_session.query(VersionHistory) \
+            .order_by(VersionHistory.id.asc()) \
+            .all()
+        local_history = self.session.all_local_revisions
+
+        for index, remote_revision in enumerate(remote_history):
+            print(f'{index}| remote <{remote_revision}> : local {local_history[index].revision}')
+
+            if str(remote_revision.previous_revision) != str(local_history[index].down_revision):
+                raise Exception(f'Down revision is incorrect: remote `{remote_revision.previous_revision}` != local `{local_history[index].down_revision}`')
+
+            if str(remote_revision.forward_revision) != str(local_history[index].revision):
+                raise Exception('Forward revision is incorrect')

@@ -80,8 +80,8 @@ def upgrade():
     create_table(
         'alembic_version_history',
         Column('id', Integer, primary_key=True),
-        Column('previous_revision', String, nullable=False, unique=True),
-        Column('forward_revision', String, nullable=False, unique=True),
+        Column('previous_revision', String, nullable=False),
+        Column('forward_revision', String, nullable=False),
     )
 
 
