@@ -66,3 +66,8 @@ def history(limit, upper=True):
 
     for revision in revisions:
         print(f'{revision} | {al.branch_name(revision)}')
+
+
+@cli.command(help="show future migrations")
+def show_next_migration():
+    print(al.next_rev())

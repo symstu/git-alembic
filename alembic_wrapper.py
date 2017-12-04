@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 from alembic.runtime.migration import MigrationContext, MigrationInfo
 from alembic.script import ScriptDirectory, Script
 from alembic.config import Config
-from alembic import command
+from alembic import command, util
 
 from models.history import VersionHistory
 
@@ -21,11 +21,9 @@ class AlembicMigrations:
         self.context = MigrationContext.configure(self.conn)
         self.config = Config('alembic.ini')
 
-        if not os.path.exists('alembic'):
-            self.init()
-
-        self.script = ScriptDirectory.from_config(self.config)
-        self.git = Repo('')
+        if os.path.exists('alembic'):
+            # self.init()
+            self.script = ScriptDirectory.from_config(self.config)
 
     def current(self, verbose=False):
 
@@ -34,8 +32,51 @@ class AlembicMigrations:
 
         return self.context.get_current_revision()
 
-    def init(self):
-        command.init(self.config, 'alembic/', '')
+    @staticmethod
+    def init(directory='alembic', template='git-generic'):
+
+        if os.access(directory, os.F_OK):
+            raise util.CommandError("Directory %s already exists" % directory)
+
+        template_dir = os.path.join('templates/',
+                                    template)
+        if not os.access(template_dir, os.F_OK):
+            raise util.CommandError("No such template %r" % template)
+
+        util.status("Creating directory %s" % os.path.abspath(directory),
+                    os.makedirs, directory)
+
+        versions = os.path.join(directory, 'versions')
+        util.status("Creating directory %s" % os.path.abspath(versions),
+                    os.makedirs, versions)
+
+        script = ScriptDirectory(directory)
+
+        dirs = os.listdir(template_dir)
+        dirs += ['versions/create_table_alembic_version_history.py', ]
+
+        for file_ in dirs:
+            file_path = os.path.join(template_dir, file_)
+
+            if file_ == 'alembic.ini.mako':
+                config_file = os.path.abspath('alembic.ini')
+                if os.access(config_file, os.F_OK):
+                    util.msg("File %s already exists, skipping" % config_file)
+                else:
+                    script._generate_template(
+                        file_path,
+                        config_file,
+                        script_location=directory
+                    )
+            elif os.path.isfile(file_path):
+                output_file = os.path.join(directory, file_)
+                script._copy_file(
+                    file_path,
+                    output_file
+                )
+
+        util.msg("Please edit configuration/connection/logging "
+                 "settings in %r before proceeding." % config_file)
 
     @property
     def heads(self, verbose=False):
@@ -62,8 +103,9 @@ class AlembicMigrations:
 
         return None
 
-    def __get_git_branch__(self):
-        return str(self.git.active_branch)
+    @staticmethod
+    def __get_git_branch__():
+        return str(Repo('').active_branch)
 
     def create(self, name):
 
@@ -171,10 +213,27 @@ class AlembicMigrations:
         if len(rev_heads) > 1:
             return False
 
-        current_revision = self.current()
-        command.upgrade(self.config, rev_heads[0].revision)
+        upgrade_migrations = self.upgrade_revisions(rev_heads[0].revision)
 
-        db_log = VersionHistory(current_revision, rev_heads[0].revision)
-        db_log.save()
+        print(f'upgrade_migrations: {upgrade_migrations}')
+
+        if not len(upgrade_migrations):
+            raise Exception('There are not new migrations')
+
+        for migration in upgrade_migrations:
+            command.upgrade(self.config, migration.revision)
+            print(f'migrating from `{migration.down_revision}` to '
+                  f'{migration.revision}')
+
+            # initial migration
+            if not migration.down_revision:
+                print('current_revision: ', migration.down_revision)
+                continue
+
+            db_log = VersionHistory(migration.down_revision, migration.revision)
+            print('saved migration: ', db_log.save())
 
         return True
+
+    def upgrade_revisions(self, head):
+        return [rev for rev in self.script.iterate_revisions(head, self.current())][::-1]

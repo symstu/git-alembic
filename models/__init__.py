@@ -3,7 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session
 
 
-db_connection = 'postgresql+psycopg2://postgres:postgres@localhost:5432/travel'
+db_connection = 'postgresql+psycopg2://postgres:postgres@localhost:5432/alembic'
 engine = create_engine(db_connection)
 
 meta = MetaData()
