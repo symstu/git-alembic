@@ -23,5 +23,8 @@ class MigratingTestCase(unittest.TestCase):
             print(f'Create migration master:{m}')
             self.master.alembic.create(f'master_{m}')
 
+        print('Commit master and new alembic folder')
+        self.master.commit('hello')
+
     def tearDown(self):
         pass
