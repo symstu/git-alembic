@@ -54,7 +54,7 @@ class MigratingTestCase(unittest.TestCase):
         self.master.alembic.migrate()
 
         print('Merge db develop -> master')
-        self.master.merge(self.develop.branch, self.master.branch)
+        self.master.merge(self.master.branch, self.develop.branch)
 
         print('Migrate master')
         self.master.alembic.migrate()
