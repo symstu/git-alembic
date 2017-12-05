@@ -43,12 +43,20 @@ class AlembicSession:
 
     def __init__(self, db_name):
         self.db_name = db_name
+
+        self.db = Database(db_name=db_name)
+        self.db.create()
+
         self.alembic = AlembicMigrations(Database(db_name=db_name).url)
         self.repo = git.Repo('')
 
+    @property
+    def branch(self):
+        return self.repo.branches[self.db_name]
+
     def set_active_branch(self):
 
-        # create branch if not exists
+        # create git branch if not exists
         if self.db_name not in [branch.name for branch in self.repo.heads]:
             self.repo.create_head(self.db_name)
 
@@ -58,6 +66,18 @@ class AlembicSession:
     def commit(self, name):
         self.repo.index.add(list(self.untracked_files))
         self.repo.index.commit(name)
+
+    def merge(self, first, second):
+        first = self.repo.branches[first]
+        second = self.repo.branches[second]
+
+        base = self.repo.merge_base(first, second)
+        self.repo.index.merge_tree(second, base=base)
+
+        self.repo.index.commit(f'Merge {first.name} -> {second.name}',
+                               parent_commits=(first.commit, second.commit))
+
+        self.repo.active_branch.checkout(force=True)
 
     @property
     def untracked_files(self):
