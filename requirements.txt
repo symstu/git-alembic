@@ -10,3 +10,4 @@ python-editor==1.0.3
 six==1.10.0
 smmap2==2.0.3
 SQLAlchemy==1.1.13
+SQLAlchemy-Utils==0.32.21
