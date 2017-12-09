@@ -33,7 +33,12 @@ class Database:
         if not database_exists(self.engine.url):
             create_database(self.engine.url)
 
-    def remove(self):
+    def remove(self, db_name):
+
+        if db_name:
+            new_url = self.url.split('/')
+            new_url[-1] = db_name
+            self.url = '/'.join(new_url)
 
         if database_exists(self.engine.url):
             drop_database(self.engine.url)
@@ -51,7 +56,7 @@ class AlembicSession:
         self.repo = git.Repo('')
         self.set_active_branch()
         self.initial_revision = self.repo.index.version
-        print(f'current {db_name} revision is {self.current_revision}')
+        print(f'current {db_name} revision is {self.initial_revision}')
 
     @property
     def branch(self):
@@ -87,8 +92,8 @@ class AlembicSession:
 
         self.repo.active_branch.checkout(force=True)
 
-    def drop_db(self):
-        self.db.remove()
+    def drop_db(self, db_name=None):
+        self.db.remove(db_name=None)
 
     def delete(self):
 
