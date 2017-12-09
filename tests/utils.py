@@ -49,18 +49,26 @@ class AlembicSession:
 
         self.alembic = AlembicMigrations(Database(db_name=db_name).url)
         self.repo = git.Repo('')
+        self.set_active_branch()
+        self.initial_revision = self.repo.index.version
+        print(f'current {db_name} revision is {self.current_revision}')
 
     @property
     def branch(self):
         return self.repo.branches[self.db_name]
 
-    def set_active_branch(self):
+    def set_active_branch(self, branch_name=None):
 
         # create git branch if not exists
         if self.db_name not in [branch.name for branch in self.repo.heads]:
             self.repo.create_head(self.db_name)
 
-        getattr(self.repo.heads, self.db_name).checkout()
+        future_branch = self.db_name
+
+        if branch_name:
+            future_branch = branch_name
+
+        getattr(self.repo.heads, future_branch).checkout()
         print(f'GIT: branch switched to: {self.repo.active_branch}')
 
     def commit(self, name):
@@ -78,6 +86,22 @@ class AlembicSession:
                                parent_commits=(first.commit, second.commit))
 
         self.repo.active_branch.checkout(force=True)
+
+    def drop_db(self):
+        self.db.remove()
+
+    def delete(self):
+
+        if self.db_name != self.repo.active_branch.name:
+            self.set_active_branch('master')
+
+        self.repo.delete_head(getattr(self.repo.heads, self.db_name))
+        self.drop_db()
+
+        os.remove('alembic/')
+
+    def reset_to_initial(self):
+        self.repo.index.reset(commit=self.initial_revision)
 
     @property
     def untracked_files(self):

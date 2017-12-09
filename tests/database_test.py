@@ -53,11 +53,14 @@ class MigratingTestCase(unittest.TestCase):
         print('Migrate master database')
         self.master.alembic.migrate()
 
-        print('Merge db develop -> master')
+        print('Merge db master -> develop')
         self.master.merge(self.master.branch, self.develop.branch)
 
         print('Migrate master')
         self.master.alembic.migrate()
 
     def tearDown(self):
-        pass
+
+        self.develop.delete()
+        self.master.drop_db()
+        self.master.reset_to_initial()
