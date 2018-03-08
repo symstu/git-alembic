@@ -8,7 +8,8 @@ from alembic.script import ScriptDirectory
 from alembic.config import Config
 from alembic import command, util
 
-from models.history import VersionHistory
+from faq_migrations.models import db_session
+from faq_migrations.models.history import VersionHistory
 
 
 class LowLevelApi:
@@ -37,6 +38,7 @@ class LowLevelApi:
 
     @__database_url__.setter
     def __database_url__(self, db_url):
+        print('db_url: ', db_url)
         self.config.set_section_option('alembic', 'sqlalchemy.url', db_url)
 
     def __get_last_revision__(self):
@@ -273,8 +275,6 @@ class CompareLocalRemote:
         self.session = AlembicMigrations()
 
     def compare_history(self):
-        from models import db_session
-
         remote_history = db_session.query(VersionHistory) \
             .order_by(VersionHistory.id.asc()) \
             .all()

@@ -4,7 +4,7 @@ import git
 from sqlalchemy import create_engine
 from sqlalchemy_utils import database_exists, create_database, drop_database
 
-from source.alembic_wrapper import AlembicMigrations
+from faq_migrations.source.alembic_wrapper import AlembicMigrations
 
 
 class Database:

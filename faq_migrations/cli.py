@@ -1,5 +1,7 @@
 import click
-from source.alembic_wrapper import AlembicMigrations
+
+from faq_migrations.source.alembic_wrapper import AlembicMigrations, \
+    CompareLocalRemote
 
 al = AlembicMigrations()
 
@@ -76,7 +78,6 @@ def upgrade_migrations():
 
 @cli.command(help="Compare local and remote history")
 def compare_history():
-    from source.alembic_wrapper import CompareLocalRemote
 
     lr = CompareLocalRemote()
     lr.compare_history()
