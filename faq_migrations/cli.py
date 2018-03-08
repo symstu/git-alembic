@@ -3,8 +3,6 @@ import click
 from faq_migrations.source.alembic_wrapper import AlembicMigrations, \
     CompareLocalRemote
 
-al = AlembicMigrations()
-
 
 @click.group()
 def cli():
@@ -13,7 +11,7 @@ def cli():
 
 @cli.command(help='Init alembic')
 def init():
-    al.init()
+    AlembicMigrations().init()
 
 
 @cli.command(help='Show current heads')
@@ -21,7 +19,7 @@ def heads():
 
     print('------------------------------------------')
 
-    for head in al.heads:
+    for head in AlembicMigrations().heads:
         print(f'{head.longdoc}')
         print(f'Branch: {al.branch_name(head)}')
         print('------------------------------------------')
@@ -29,43 +27,43 @@ def heads():
 
 @cli.command(help='Show current migration revision')
 def current():
-    print(al.current(True))
+    print(AlembicMigrations().current(True))
 
 
 @cli.command(help='Create new migration in current branch')
 @click.argument('name')
 def create(name):
-    al.create(name)
+    AlembicMigrations().create(name)
 
 
 @cli.command(help='Merge branches')
 def merge():
-    al.merge()
+    AlembicMigrations().merge()
 
 
 @cli.command(help='Show previous migration')
 def last_revision():
-    print(al.__get_last_revision__())
+    print(AlembicMigrations().__get_last_revision__())
 
 
 @cli.command()
 def revision_ver():
-    al.get_revision()
+    AlembicMigrations().get_revision()
 
 
 @cli.command(help='Upgrade to head')
 def migrate():
     if not al.migrate():
         print('\nYou must merge branches first\n')
-        al.merge()
-        al.migrate()
+        AlembicMigrations().merge()
+        AlembicMigrations().migrate()
 
 
 @cli.command(help='Show last migration, limit=10')
 @click.argument('limit', default=10)
 def history(limit, upper=True):
 
-    revisions = al.history(limit, upper)
+    revisions = AlembicMigrations().history(limit, upper)
 
     for revision in revisions:
         print(f'{revision} | {al.branch_name(revision)}')
@@ -73,7 +71,7 @@ def history(limit, upper=True):
 
 @cli.command(help="show future migrations")
 def upgrade_migrations():
-    print(al.upgrade_revisions(al.current()))
+    print(AlembicMigrations().upgrade_revisions(AlembicMigrations().current()))
 
 
 @cli.command(help="Compare local and remote history")

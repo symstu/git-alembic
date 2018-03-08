@@ -8,11 +8,10 @@ setup(
     author='Maksym Stukalo',
     author_email='stukalo.maksym@gmail.com',
     version=faq_migrations.__version__,
-    packages=find_packages(),
     long_description=open(join(dirname(__file__), 'README.txt')).read(),
     entry_points={
         'console_scripts':
-            ['faq_migrations = faq_migrations.manager']
+            ['faq_migrations = faq_migrations.cli:cli']
     },
     install_requires=[
         'GitPython==2.1.5',
@@ -21,5 +20,8 @@ setup(
         'psycopg2==2.7.3.1',
         'SQLAlchemy==1.1.13',
         'SQLAlchemy-Utils==0.32.21'
+    ],
+    data_files=[
+        ('alembic.ini', ['alembic.ini'])
     ]
 )
