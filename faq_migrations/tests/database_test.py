@@ -19,8 +19,8 @@ class MigratingTestCase(unittest.TestCase):
         self.master.alembic.init()
 
         for m in range(1, 4):
-            print(f'Create migration master:{m}')
-            self.master.alembic.create(f'master_{m}')
+            print('Create migration master:{}'.format(m))
+            self.master.alembic.create('master_{}'.format(m))
 
         print('Commit master and new alembic folder')
         self.master.commit('master')
@@ -32,8 +32,8 @@ class MigratingTestCase(unittest.TestCase):
         self.develop.set_active_branch()
 
         for m in range(4, 7):
-            print(f'Create migration develop:{m}')
-            self.develop.alembic.create(f'develop_{m}')
+            print('Create migration develop:{}'.format(m))
+            self.develop.alembic.create('develop_{}'.format(m))
 
         print('Commit develop branch')
         self.develop.commit('develop')
@@ -44,8 +44,8 @@ class MigratingTestCase(unittest.TestCase):
         print('Switch to master branch')
         self.master.set_active_branch()
 
-        print(f'Create migration master:7')
-        self.master.alembic.create(f'master_7')
+        print('Create migration master:7')
+        self.master.alembic.create('master_7')
 
         print('Commit master branch')
         self.master.commit('master')

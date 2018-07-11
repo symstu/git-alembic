@@ -18,7 +18,7 @@ class VersionHistory(Base):
             .filter(VersionHistory.forward_revision == self.forward_revision)\
             .filter(VersionHistory.previous_revision == self.previous_revision)\
             .first()
-        print('result: ', result)
+
         return True if not result else False
 
     @staticmethod
