@@ -1,13 +1,12 @@
 from setuptools import setup, find_packages
 from os.path import join, dirname
-import faq_migrations
 
 
 setup(
     name='faq_migrations',
     author='Maksym Stukalo',
     author_email='stukalo.maksym@gmail.com',
-    version=faq_migrations.__version__,
+    version='1.0.1',
     long_description=open(join(dirname(__file__), 'README.md')).read(),
     entry_points={
         'console_scripts':
@@ -21,5 +20,8 @@ setup(
         'SQLAlchemy>=1.1.9',
         'SQLAlchemy-Utils>=0.32.21'
     ],
-    packages=find_packages()
+    packages=find_packages(),
+    data_files=[
+        ('', ['README.md', ])
+    ]
 )
