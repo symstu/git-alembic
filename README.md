@@ -88,8 +88,15 @@ config.database_url = 'driver://username:pass@host:port/db_name'
 
 
 # Building and Publication
+
 ### Build
 ```bash
 python setup.py sdist
 twine upload dist/*
+```
+
+### Publication
+```bash
+pip install twine
+twine upload dist/*  
 ```
