@@ -85,3 +85,11 @@ config.database_url = 'driver://username:pass@host:port/db_name'
 ```
 > Before initializing new directory with migrations you must setup config 
 > params.
+
+
+# Building and Publication
+### Build
+```bash
+python setup.py sdist
+twine upload dist/*
+```

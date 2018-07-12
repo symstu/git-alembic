@@ -6,17 +6,17 @@ class VersionHistory(Base):
     __tablename__ = 'alembic_version_history'
 
     id = Column(Integer, primary_key=True)
-    previous_revision = Column(String, nullable=False)
-    forward_revision = Column(String, nullable=False)
+    from_ver = Column(String, nullable=False)
+    to_ver = Column(String, nullable=False)
 
     def __init__(self, previous_revision, forward_revision):
-        self.previous_revision = previous_revision
-        self.forward_revision = forward_revision
+        self.from_ver = previous_revision
+        self.to_ver = forward_revision
 
     def check_for_copy(self):
         result = db_session.query(VersionHistory)\
-            .filter(VersionHistory.forward_revision == self.forward_revision)\
-            .filter(VersionHistory.previous_revision == self.previous_revision)\
+            .filter(VersionHistory.to_ver == self.to_ver)\
+            .filter(VersionHistory.from_ver == self.from_ver)\
             .first()
 
         return True if not result else False
@@ -44,5 +44,5 @@ class VersionHistory(Base):
         return False
 
     def __repr__(self):
-        return f"<Version({self.id}) {self.previous_revision} -> " \
-               f"{self.forward_revision}>"
+        return f"<Version({self.id}) {self.from_ver} -> " \
+               f"{self.to_ver}>"
