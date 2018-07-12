@@ -6,7 +6,7 @@
 
 # How to install
 ```bash
-pip install git+https://github.com/symstu/git-alembic.git
+pip install faq-migrations
 ```
 
 # Add CLI to your project
