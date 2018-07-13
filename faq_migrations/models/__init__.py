@@ -2,8 +2,10 @@ from sqlalchemy import create_engine, MetaData
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session
 
+from faq_migrations.settings import config
 
-db_connection = 'postgresql+psycopg2://postgres:postgres@localhost:5432/alembic'
+
+db_connection = config.database_url
 engine = create_engine(db_connection)
 
 meta = MetaData()
