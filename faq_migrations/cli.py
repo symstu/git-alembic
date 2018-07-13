@@ -34,7 +34,7 @@ def heads():
 @migrations.command(help='Show current migration revision')
 def current():
     """
-    Show current migration revision
+    Show current migration revision from database
     """
     from faq_migrations.source.alembic_wrapper import AlembicMigrations
     print(AlembicMigrations().current(True))
@@ -60,8 +60,12 @@ def merge():
     AlembicMigrations().merge()
 
 
-@migrations.command(help='Show previous migration')
+@migrations.command(help='Show last created migration from files')
 def last_revision():
+    """
+    Show last created migration from files. This may be not yet applied
+    migration
+    """
     from faq_migrations.source.alembic_wrapper import AlembicMigrations
     print(AlembicMigrations().__get_last_revision__())
 
@@ -81,7 +85,7 @@ def migrate():
 
     am = AlembicMigrations()
 
-    if not am.migrate():
+    if am.migrate() is False:
         print('\nYou must merge branches first\n')
         am.merge()
         am.migrate()
@@ -90,11 +94,13 @@ def migrate():
 @migrations.command(help='Show last migration, limit=20, upper=True')
 @click.argument('limit', default=20)
 @click.argument('upper', default=True)
-def history(limit=20, upper=True):
+@click.argument('verbose', default=False)
+def history(limit=20, upper=True, verbose=False):
     """
     Show migration history
     :param limit: limit of output migrations
     :param upper: if True will be show new migrations (like DESC by datetime)
+    :param verbose: show log entry of migration
     """
     from faq_migrations.source.alembic_wrapper import AlembicMigrations
 
@@ -102,7 +108,15 @@ def history(limit=20, upper=True):
     revisions = am.history(limit, upper)
 
     for revision in revisions:
-        print('{} | {}'.format(
+
+        if verbose:
+            script = am.get_revision(revision.revision)
+            print('{}({}): {}'.format(
+                revision, am.branch_name(revision), script.log_entry
+            ))
+            continue
+
+        print('{} ({})'.format(
             revision, am.branch_name(revision))
         )
 

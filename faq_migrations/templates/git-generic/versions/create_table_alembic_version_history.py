@@ -10,7 +10,7 @@ Create Date: 2017-12-04 19:47:36.965065
 # revision identifiers, used by Alembic.
 revision = '336a14783fdb'
 down_revision = None
-branch_labels = None
+branch_labels = ('alembic', )
 depends_on = None
 git_branch = 'master'
 

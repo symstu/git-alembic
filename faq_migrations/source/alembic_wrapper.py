@@ -135,7 +135,7 @@ class LowLevelApi:
         :return: git branch name
         """
 
-        branch = revision.revision
+        branch = 'no branch'
 
         if hasattr(revision.module, 'git_branch'):
             branch = revision.module.git_branch
@@ -241,7 +241,7 @@ class AlembicMigrations(LowLevelApi):
         for head in self.script.get_heads():
             yield self.get_revision(head)
 
-    def get_revision(self, revision_id='9c26830e16a1'):
+    def get_revision(self, revision_id):
         """
         Get Revision by ID
 
@@ -319,7 +319,7 @@ class AlembicMigrations(LowLevelApi):
             except ValueError:
                 util.msg('Your choice must be of int data type')
 
-    def history(self, limit=10, upper=True):
+    def history(self, limit=20, upper=True):
         """
         Show migrations
 
@@ -329,13 +329,13 @@ class AlembicMigrations(LowLevelApi):
         :return: Revision objects
         """
 
-        revisions = [revision for revision in self.script.walk_revisions()]
+        revisions = list(self.script.walk_revisions())
 
-        if limit < len(revisions):
+        if limit > len(revisions):
             limit = len(revisions)
 
         if upper:
-            return revisions[-limit:]
+            return revisions[:limit]
 
         return revisions[0: limit]
 
@@ -353,16 +353,22 @@ class AlembicMigrations(LowLevelApi):
 
         upgrade_migrations = self.upgrade_revisions(rev_heads[0].revision)
 
-        util.msg('upgrade_migrations: {}'.format(upgrade_migrations))
-
         if not len(upgrade_migrations):
-            raise Exception('There are not new migrations')
+            return
+
+        if not self.engine.dialect.has_table(
+                self.engine, VersionHistory.__tablename__):
+            VersionHistory.__table__.create(bind=self.engine)
 
         for migration in upgrade_migrations:
             command.upgrade(self.init_config, migration.revision)
 
+            down_revision = migration.down_revision
+
             # it may be a list when revision in merge point
-            down_revision = str(migration.down_revision)
+            if type(migration.down_revision) in (list, tuple):
+                down_revision = str(down_revision)
+
             util.msg('migrating from `{}` to {}'.format(
                 down_revision, migration.revision)
             )
@@ -373,7 +379,9 @@ class AlembicMigrations(LowLevelApi):
                 continue
 
             db_log = VersionHistory(down_revision, migration.revision)
-            util.msg('saved migration: ', db_log.save())
+            util.msg('saved migration: {}, id:{}'.format(
+                db_log.save(), db_log.id)
+            )
 
         return True
 
@@ -393,7 +401,11 @@ class AlembicMigrations(LowLevelApi):
         List of all created migrations
         :return: Revision Objects
         """
-        return [rev for rev in self.script.walk_revisions()][::-1]
+        # Skip initial migration with None down_revision and reverse list
+        revisions = [rev for rev in self.script.walk_revisions()
+                     if rev.down_revision]
+        revisions = revisions[::-1]
+        return revisions
 
     def branch_name(self, revision):
         """
@@ -421,7 +433,7 @@ class CompareLocalRemote:
         """
         engine = self.session.engine
 
-        if not engine.dialect.has_table(engine, VersionHistory):
+        if not engine.dialect.has_table(engine, VersionHistory.__tablename__):
             raise Exception('Table `alembic_version_history` does not exists,'
                             ' please migrate your db first')
 
@@ -435,14 +447,22 @@ class CompareLocalRemote:
                 index, remote_revision, local_history[index].revision
             ))
 
-            if str(remote_revision.previous_revision) != \
+            # # First revision doesn't have down_revision, check only forward rev
+            # if not index and not local_history[index].down_revision:
+            #     if local_history[index].revision == remote_revision.to_ver:
+            #         continue
+
+            if str(remote_revision.from_ver) != \
                     str(local_history[index].down_revision):
-                previous = remote_revision.previous_revision
+                previous = remote_revision.from_ver
                 down_revision = local_history[index].down_revision
+
+                if type(down_revision) in (list, tuple):
+                    down_revision = str(down_revision)
 
                 raise Exception('Down revision is incorrect: remote `{}` != '
                                 'local `{}`'.format(previous, down_revision))
 
-            if str(remote_revision.forward_revision) != \
+            if str(remote_revision.to_ver) != \
                     str(local_history[index].revision):
                 raise Exception('Forward revision is incorrect')
