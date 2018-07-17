@@ -1,4 +1,8 @@
+from alembic import op
+
 from sqlalchemy import Column, Integer, String
+from sqlalchemy.orm.session import Session
+
 from . import Base, db_session, engine, MetaData
 
 
@@ -13,17 +17,20 @@ class VersionHistory(Base):
         self.from_ver = previous_revision
         self.to_ver = forward_revision
 
+    @staticmethod
+    def alembic_session():
+        return Session(bind=op.get_context().bind)
+
     def check_for_copy(self):
-        result = db_session.query(VersionHistory)\
+        result = self.alembic_session().query(VersionHistory)\
             .filter(VersionHistory.to_ver == self.to_ver)\
             .filter(VersionHistory.from_ver == self.from_ver)\
             .first()
 
         return True if not result else False
 
-    @staticmethod
-    def list(offset=0, limit=0):
-        return db_session.query(VersionHistory)\
+    def list(self, offset=0, limit=0):
+        return self.alembic_session().query(VersionHistory)\
             .filter()\
             .order_by(VersionHistory.id.desc()) \
             .offset(offset) \
@@ -36,9 +43,7 @@ class VersionHistory(Base):
             metadata.create_all()
 
         if self.check_for_copy():
-            db_session.add(self)
-            db_session.commit()
-
+            self.alembic_session().add(self)
             return True
 
         return False

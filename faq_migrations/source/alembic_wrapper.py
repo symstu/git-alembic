@@ -1,7 +1,5 @@
 import os
 
-from git import Repo
-
 from sqlalchemy import create_engine
 
 from alembic.runtime.migration import MigrationContext
@@ -95,6 +93,7 @@ class LowLevelApi:
 
         :return: current git branch
         """
+        from git import Repo
         return str(Repo('').active_branch)
 
     def __set_branch_to_script__(self):
@@ -149,9 +148,7 @@ class AlembicMigrations(LowLevelApi):
     """
 
     def __init__(self):
-
         super(AlembicMigrations, self).__init__()
-        self.__set_branch_to_script__()
 
     @staticmethod
     def init():
@@ -261,6 +258,7 @@ class AlembicMigrations(LowLevelApi):
         r_heads = [head for head in self.heads]
 
         if len(r_heads) < 2:
+            self.__set_branch_to_script__()
             command.revision(self.init_config, name)
 
         else:
@@ -360,28 +358,12 @@ class AlembicMigrations(LowLevelApi):
                 self.engine, VersionHistory.__tablename__):
             VersionHistory.__table__.create(bind=self.engine)
 
-        for migration in upgrade_migrations:
-            command.upgrade(self.init_config, migration.revision)
+        # This is Monkey-Patch for adding logging into migration process
+        from alembic.runtime import migration
+        from faq_migrations.patch import PatchedHeadMaintainer
 
-            down_revision = migration.down_revision
-
-            # it may be a list when revision in merge point
-            if type(migration.down_revision) in (list, tuple):
-                down_revision = str(down_revision)
-
-            util.msg('migrating from `{}` to {}'.format(
-                down_revision, migration.revision)
-            )
-
-            # initial migration
-            if not down_revision:
-                util.msg('current_revision: {}'.format(down_revision))
-                continue
-
-            db_log = VersionHistory(down_revision, migration.revision)
-            util.msg('saved migration: {}, id:{}'.format(
-                db_log.save(), db_log.id)
-            )
+        migration.HeadMaintainer = PatchedHeadMaintainer
+        command.upgrade(self.init_config, 'head')
 
         return True
 
@@ -426,10 +408,27 @@ class CompareLocalRemote:
     def __init__(self):
         self.session = AlembicMigrations()
 
-    def compare_history(self):
+    @staticmethod
+    def __get_all_revisions__():
+        revisions = db_session.query(VersionHistory) \
+            .order_by(VersionHistory.id.asc()) \
+            .all()
+        return list(revisions)
+
+    def export_history(self):
+        import pickle
+
+        pickle.dump(
+            self.__get_all_revisions__(),
+            open('migration_history.bin', 'wb')
+        )
+
+    def compare_history(self, from_bin_file=None):
         """
         Compare local migrations sequence and remote at the database. Raise
         Exception if local and remote sequence are not same.
+
+        :param from_bin_file: BytesObject
         """
         engine = self.session.engine
 
@@ -437,9 +436,15 @@ class CompareLocalRemote:
             raise Exception('Table `alembic_version_history` does not exists,'
                             ' please migrate your db first')
 
-        remote_history = db_session.query(VersionHistory) \
-            .order_by(VersionHistory.id.asc()) \
-            .all()
+        if not from_bin_file:
+            remote_history = db_session.query(VersionHistory) \
+                .order_by(VersionHistory.id.asc()) \
+                .all()
+        else:
+            import pickle
+
+            remote_history = pickle.load(from_bin_file)
+
         local_history = self.session.all_local_revisions
 
         for index, remote_revision in enumerate(remote_history):
@@ -447,7 +452,9 @@ class CompareLocalRemote:
                 index, remote_revision, local_history[index].revision
             ))
 
-            # # First revision doesn't have down_revision, check only forward rev
+            # # First revision doesn't have down_revision, check only
+            # forward rev
+            #
             # if not index and not local_history[index].down_revision:
             #     if local_history[index].revision == remote_revision.to_ver:
             #         continue

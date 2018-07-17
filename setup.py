@@ -6,7 +6,7 @@ setup(
     name='faq_migrations',
     author='Maksym Stukalo',
     author_email='stukalo.maksym@gmail.com',
-    version='1.0.4',
+    version='1.0.5',
     long_description=open(join(dirname(__file__), 'README.md')).read(),
     entry_points={
         'console_scripts':
@@ -21,7 +21,4 @@ setup(
         'SQLAlchemy-Utils>=0.32.21'
     ],
     packages=find_packages(),
-    data_files=[
-        ('', ['README.md', ]),
-    ]
 )

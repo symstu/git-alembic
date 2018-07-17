@@ -16,19 +16,28 @@ def init():
 
 
 @migrations.command(help='Show current heads')
-def heads():
+@click.argument('abnormal_termination', default=False)
+def heads(abnormal_termination):
     """
     Show current heads
     """
     from faq_migrations.source.alembic_wrapper import AlembicMigrations
 
     al = AlembicMigrations()
+    migration_heads = list(al.heads)
 
     print('------------------------------------------')
-    for head in al.heads:
+    for head in migration_heads:
         print(head.longdoc)
         print('Branch: {}'.format(al.branch_name(head)))
         print('------------------------------------------')
+
+    # Exit with status code 1 if exists more then one migration.
+    # We need it for CI
+    if abnormal_termination and (len(migration_heads) > 1):
+        raise SystemExit(
+            f'Current migrations have {len(migration_heads)} heads. Fix it!'
+        )
 
 
 @migrations.command(help='Show current migration revision')
@@ -131,7 +140,8 @@ def upgrade_migrations():
 
 
 @migrations.command(help="Compare local and remote history")
-def compare_history():
+@click.argument('from_file', default=False)
+def compare_history(from_file):
     """
     Compare local migration sequence based of migration files and remove in
     alembic_version_history. If sequences are not same should raise Exception
@@ -139,4 +149,19 @@ def compare_history():
     from faq_migrations.source.alembic_wrapper import CompareLocalRemote
 
     lr = CompareLocalRemote()
-    lr.compare_history()
+
+    if not from_file:
+        lr.compare_history()
+    else:
+        lr.compare_history(open(from_file, 'rb'))
+
+
+@migrations.command(help="Export Database history to BIN file")
+def export_db_history():
+    """
+    Get all migrations from database and dump into BIN file
+    """
+    from faq_migrations.source.alembic_wrapper import CompareLocalRemote
+
+    lr = CompareLocalRemote()
+    lr.export_history()
