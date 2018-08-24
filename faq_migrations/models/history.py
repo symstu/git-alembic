@@ -51,3 +51,9 @@ class VersionHistory(Base):
     def __repr__(self):
         return f"<Version({self.id}) {self.from_ver} -> " \
                f"{self.to_ver}>"
+
+
+class VersionNumber(Base):
+    __tablename__ = 'alembic_version'
+
+    version_num = Column(String, primary_key=True)

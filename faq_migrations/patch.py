@@ -1,24 +1,7 @@
-from alembic.runtime.migration import RevisionStep, HeadMaintainer
+from alembic.runtime.migration import HeadMaintainer, MigrationStep
 
+from faq_migrations.models import db_session
 from faq_migrations.models.history import VersionHistory
-
-
-class PatchedMigrationStep:
-    @classmethod
-    def upgrade(cls, revision_map, script):
-        down_revision = script.module.down_revision
-
-        # it may be a list when revision in merge point
-        if type(down_revision) in (list, tuple):
-            down_revision = str(script.module.down_revision)
-
-        # initial migration
-        if down_revision:
-            print('PATCH: ', down_revision, script.module.revision)
-            db_log = VersionHistory(down_revision, script.module.revision)
-            db_log.save()
-
-        return RevisionStep(revision_map, script, True)
 
 
 class PatchedHeadMaintainer(HeadMaintainer):
@@ -44,3 +27,20 @@ class PatchedHeadMaintainer(HeadMaintainer):
                 from_ver=down_revision,
                 to_ver=script.module.revision
             )
+
+
+class MigrationStepPatched(MigrationStep):
+
+    @classmethod
+    def downgrade_from_script(cls, revision_map, script):
+        a = super(MigrationStepPatched, cls).downgrade_from_script(
+            revision_map, script
+        )
+        print('RESULT OF MIGRATION : ', a)
+        db_session.delete(
+            db_session.query(VersionHistory).filter(
+                VersionHistory.to_ver == script.revision
+            ).first()
+        )
+        db_session.commit()
+        return a

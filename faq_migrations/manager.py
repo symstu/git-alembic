@@ -1,4 +1,4 @@
-from faq_migrations.cli import cli
+from faq_migrations.cli import migrations
 
 
 if __name__ == '__main__':

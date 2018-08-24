@@ -100,6 +100,30 @@ def migrate():
         am.migrate()
 
 
+@migrations.command(help='Downgrade from current head on few migrations')
+@click.argument('amount', default=1)
+def downgrade(amount):
+    """
+    Run migrations to available HEAD
+    """
+    from faq_migrations.source.alembic_wrapper import AlembicMigrations
+
+    am = AlembicMigrations()
+    am.downgrade(amount)
+
+
+@migrations.command(help='Downgrade migrations passed as list of revisions')
+@click.argument('revisions', default=[])
+def downgrade_heads(revisions):
+    """
+    Run migrations to available HEAD
+    """
+    from faq_migrations.source.alembic_wrapper import AlembicMigrations
+
+    am = AlembicMigrations()
+    am.downgrade(revisions.split(','))
+
+
 @migrations.command(help='Show last migration, limit=20, upper=True')
 @click.argument('limit', default=20)
 @click.argument('upper', default=True)

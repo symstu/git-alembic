@@ -9,7 +9,7 @@ from alembic import command, util
 
 from faq_migrations.settings import config
 from faq_migrations.models import db_session
-from faq_migrations.models.history import VersionHistory
+from faq_migrations.models.history import VersionHistory, VersionNumber
 
 
 class LowLevelApi:
@@ -397,6 +397,45 @@ class AlembicMigrations(LowLevelApi):
         :return: git branch name of specific revision
         """
         return self.__branch_name__(revision)
+
+    def downgrade(self, amount):
+        from faq_migrations.patch import MigrationStepPatched
+        from alembic.runtime import migration
+
+        migration.MigrationStep = MigrationStepPatched
+
+        if isinstance(amount, int):
+            print('Running downgrade for ', amount, ' migrations')
+
+            migrations = db_session.query(VersionHistory)\
+                .order_by(VersionHistory.id.desc()).limit(amount).all()
+
+            for migration in migrations:
+                command.downgrade(self.init_config, migration.from_ver)
+
+        elif isinstance(amount, list):
+            for revision in amount:
+                top = db_session.query(VersionHistory).filter(
+                    VersionHistory.to_ver == revision
+                ).first()
+
+                current_head = db_session.query(VersionNumber).first()
+                current_head.version_num = top.to_ver
+                db_session.commit()
+
+                command.downgrade(self.init_config, top.from_ver)
+
+            # revert migration sequence head
+            last_migration = db_session.query(VersionHistory).order_by(
+                VersionHistory.id.desc()
+            ).first()
+
+            current_head = db_session.query(VersionNumber).first()
+            current_head.version_num = last_migration.to_ver
+            db_session.commit()
+
+        else:
+            raise Exception('Invalid parameter type, might be int or list')
 
 
 class CompareLocalRemote:
